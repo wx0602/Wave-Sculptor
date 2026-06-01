@@ -79,10 +79,18 @@ fn paint_background(
     mode: WaveformMode,
     channels: usize,
 ) {
-    painter.rect_filled(rect, 16.0, palette.card_bg);
-    painter.rect_stroke(rect, 16.0, Stroke::new(1.0, palette.card_border));
-    painter.rect_filled(content_rect, 12.0, palette.card_alt_bg);
-    painter.rect_stroke(content_rect, 12.0, Stroke::new(1.0, palette.card_border));
+    painter.rect_filled(rect, 10.0, palette.panel_bg);
+    painter.rect_stroke(
+        rect,
+        10.0,
+        Stroke::new(1.0, palette.card_border.gamma_multiply(0.55)),
+    );
+    painter.rect_filled(content_rect, 8.0, palette.card_alt_bg);
+    painter.rect_stroke(
+        content_rect,
+        8.0,
+        Stroke::new(1.0, palette.card_border.gamma_multiply(0.45)),
+    );
     let center_y = plot_rect.center().y;
     painter.line_segment(
         [Pos2::new(plot_rect.left(), center_y), Pos2::new(plot_rect.right(), center_y)],

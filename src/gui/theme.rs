@@ -53,15 +53,15 @@ impl ThemeMode {
                 card_border: color(0x2A456A),
                 text_primary: color(0xEAF3FF),
                 text_secondary: color(0x93A8C2),
-                accent: color(0x38BDF8),
-                accent_hover: color(0x2563EB),
-                accent_active: color(0x1D4ED8),
-                accent_soft: rgba(0x38, 0xBD, 0xF8, 28),
+                accent: color(0x2D6CDF),
+                accent_hover: color(0x3B82F6),
+                accent_active: color(0x2457B7),
+                accent_soft: rgba(0x38, 0x7C, 0xD8, 20),
                 waveform_mixed: color(0x63CFF9),
                 waveform_left: color(0x73C8F7),
                 waveform_right: color(0x4FC3D9),
                 playhead: color(0xF97316),
-                selection_fill: rgba(0x38, 0xBD, 0xF8, 44),
+                selection_fill: rgba(0x38, 0x91, 0xDB, 28),
                 axis_line: color(0x36557D),
                 axis_text: color(0x9BB3D3),
                 status_bg: color(0x14233A),
@@ -76,15 +76,15 @@ impl ThemeMode {
                 card_border: color(0xB8D7EE),
                 text_primary: color(0x17324D),
                 text_secondary: color(0x60758A),
-                accent: color(0x2563EB),
-                accent_hover: color(0x3B82F6),
-                accent_active: color(0x1D4ED8),
-                accent_soft: rgba(0x37, 0x99, 0xEB, 24),
+                accent: color(0x2D6CDF),
+                accent_hover: color(0x3C82E6),
+                accent_active: color(0x2457B7),
+                accent_soft: rgba(0x2D, 0x6C, 0xDF, 20),
                 waveform_mixed: color(0x215D92),
                 waveform_left: color(0x2A6FA8),
                 waveform_right: color(0x238A9F),
                 playhead: color(0xDC2626),
-                selection_fill: rgba(0x37, 0x99, 0xEB, 42),
+                selection_fill: rgba(0x2D, 0x6C, 0xDF, 26),
                 axis_line: color(0xB8D7EE),
                 axis_text: color(0x6B829A),
                 status_bg: color(0xEAF6FC),
@@ -98,8 +98,8 @@ impl ThemeMode {
 pub fn apply_theme(ctx: &Context, theme: ThemeMode) {
     let palette = theme.palette();
     let mut style: Style = (*ctx.style()).clone();
-    style.spacing.button_padding = Vec2::new(11.0, 7.0);
-    style.spacing.interact_size = Vec2::new(38.0, 35.0);
+    style.spacing.button_padding = Vec2::new(10.0, 6.0);
+    style.spacing.interact_size = Vec2::new(36.0, 34.0);
     style.spacing.item_spacing = Vec2::new(8.0, 8.0);
     style.spacing.menu_margin = egui::Margin::same(8.0);
     style.visuals = build_visuals(theme, palette);
@@ -121,27 +121,27 @@ fn build_visuals(theme: ThemeMode, palette: ThemePalette) -> Visuals {
     visuals.selection.stroke = Stroke::new(1.0, palette.text_primary);
     visuals.widgets = Widgets {
         noninteractive: egui::style::WidgetVisuals {
-            weak_bg_fill: palette.card_bg,
-            bg_fill: palette.card_bg,
-            bg_stroke: Stroke::new(1.0, palette.card_border),
+            weak_bg_fill: palette.panel_bg,
+            bg_fill: palette.panel_bg,
+            bg_stroke: Stroke::new(1.0, palette.card_border.gamma_multiply(0.45)),
             fg_stroke: Stroke::new(1.0, palette.text_primary),
-            rounding: Rounding::same(12.0),
+            rounding: Rounding::same(8.0),
             expansion: 0.0,
         },
         inactive: egui::style::WidgetVisuals {
-            weak_bg_fill: palette.card_alt_bg,
-            bg_fill: palette.card_alt_bg,
-            bg_stroke: Stroke::new(1.0, palette.card_border),
+            weak_bg_fill: palette.panel_bg,
+            bg_fill: palette.panel_bg,
+            bg_stroke: Stroke::new(1.0, palette.card_border.gamma_multiply(0.55)),
             fg_stroke: Stroke::new(1.0, palette.text_primary),
-            rounding: Rounding::same(12.0),
+            rounding: Rounding::same(8.0),
             expansion: 0.0,
         },
         hovered: egui::style::WidgetVisuals {
             weak_bg_fill: palette.accent_soft,
-            bg_fill: palette.accent_hover,
+            bg_fill: palette.card_alt_bg,
             bg_stroke: Stroke::new(1.0, palette.accent_hover),
-            fg_stroke: Stroke::new(1.2, Color32::WHITE),
-            rounding: Rounding::same(12.0),
+            fg_stroke: Stroke::new(1.1, palette.text_primary),
+            rounding: Rounding::same(8.0),
             expansion: 0.0,
         },
         active: egui::style::WidgetVisuals {
@@ -149,7 +149,7 @@ fn build_visuals(theme: ThemeMode, palette: ThemePalette) -> Visuals {
             bg_fill: palette.accent_active,
             bg_stroke: Stroke::new(1.0, palette.accent_active),
             fg_stroke: Stroke::new(1.2, Color32::WHITE),
-            rounding: Rounding::same(12.0),
+            rounding: Rounding::same(8.0),
             expansion: 0.0,
         },
         open: egui::style::WidgetVisuals {
@@ -157,20 +157,20 @@ fn build_visuals(theme: ThemeMode, palette: ThemePalette) -> Visuals {
             bg_fill: palette.card_alt_bg,
             bg_stroke: Stroke::new(1.0, palette.accent),
             fg_stroke: Stroke::new(1.0, palette.text_primary),
-            rounding: Rounding::same(12.0),
+            rounding: Rounding::same(8.0),
             expansion: 0.0,
         },
     };
     visuals.window_stroke = Stroke::new(1.0, palette.card_border);
-    visuals.widgets.inactive.bg_fill = palette.card_alt_bg;
-    visuals.widgets.noninteractive.bg_fill = palette.card_bg;
-    visuals.widgets.inactive.weak_bg_fill = palette.card_alt_bg;
-    visuals.widgets.noninteractive.weak_bg_fill = palette.card_bg;
-    visuals.widgets.hovered.rounding = Rounding::same(12.0);
-    visuals.widgets.active.rounding = Rounding::same(12.0);
-    visuals.widgets.inactive.rounding = Rounding::same(12.0);
-    visuals.widgets.noninteractive.rounding = Rounding::same(12.0);
-    visuals.widgets.open.rounding = Rounding::same(12.0);
+    visuals.widgets.inactive.bg_fill = palette.panel_bg;
+    visuals.widgets.noninteractive.bg_fill = palette.panel_bg;
+    visuals.widgets.inactive.weak_bg_fill = palette.panel_bg;
+    visuals.widgets.noninteractive.weak_bg_fill = palette.panel_bg;
+    visuals.widgets.hovered.rounding = Rounding::same(8.0);
+    visuals.widgets.active.rounding = Rounding::same(8.0);
+    visuals.widgets.inactive.rounding = Rounding::same(8.0);
+    visuals.widgets.noninteractive.rounding = Rounding::same(8.0);
+    visuals.widgets.open.rounding = Rounding::same(8.0);
     visuals.hyperlink_color = palette.accent;
     visuals
 }

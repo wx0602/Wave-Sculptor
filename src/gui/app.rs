@@ -23,16 +23,16 @@ use crate::playback::player::{PlaybackStatus, Player};
 use crate::wav::{reader, writer};
 
 const APP_OUTER_PADDING: f32 = 4.0;
-const TOOLBAR_GROUP_HEIGHT: f32 = 60.0;
+const TOOLBAR_GROUP_HEIGHT: f32 = 56.0;
 const TOOLBAR_GROUP_SPACING: f32 = 8.0;
-const TOOLBAR_OUTER_PADDING: f32 = 6.0;
-const ACTION_BUTTON_HEIGHT: f32 = 35.0;
+const TOOLBAR_OUTER_PADDING: f32 = 8.0;
+const ACTION_BUTTON_HEIGHT: f32 = 34.0;
 const ACTION_BUTTON_WIDTH: f32 = 74.0;
-const GROUP_TITLE_WIDTH: f32 = 40.0;
+const GROUP_TITLE_WIDTH: f32 = 34.0;
 const INFO_KEY_WIDTH: f32 = 90.0;
 const INFO_ROW_HEIGHT: f32 = 24.0;
 const CONTENT_PANEL_SPACING: f32 = 8.0;
-const INFO_PANEL_WIDTH: f32 = 348.0;
+const INFO_PANEL_WIDTH: f32 = 344.0;
 
 #[derive(Clone, Copy)]
 enum ToolbarGroupKind {
@@ -46,11 +46,11 @@ enum ToolbarGroupKind {
 impl ToolbarGroupKind {
     fn width(self) -> f32 {
         match self {
-            Self::File => 360.0,
-            Self::Playback => 430.0,
-            Self::Theme => 260.0,
-            Self::Edit => 620.0,
-            Self::Process => 520.0,
+            Self::File => 318.0,
+            Self::Playback => 392.0,
+            Self::Theme => 236.0,
+            Self::Edit => 536.0,
+            Self::Process => 452.0,
         }
     }
 }
@@ -454,23 +454,28 @@ impl AppState {
 
     fn render_top_bar(&mut self, ui: &mut egui::Ui, playback: PlaybackStatus) {
         let palette = self.palette();
+        let panel_width = ui.available_width();
+        let toolbar_row_spacing = toolbar_row_spacing(panel_width);
         let has_audio = self.current_buffer().is_some();
         let has_selection = self.has_selection_state();
         let can_undo = self.document.as_ref().map(AudioDocument::can_undo).unwrap_or(false);
         let can_redo = self.document.as_ref().map(AudioDocument::can_redo).unwrap_or(false);
         let first_row = [
             ToolbarGroupKind::File,
-            ToolbarGroupKind::Playback,
             ToolbarGroupKind::Theme,
+            ToolbarGroupKind::Playback,
         ];
         let second_row = [ToolbarGroupKind::Edit, ToolbarGroupKind::Process];
         let aligned_row_width =
             toolbar_groups_width(&first_row).max(toolbar_groups_width(&second_row));
 
         Frame::none()
-            .fill(palette.panel_bg)
+            .fill(palette.card_bg)
+            .stroke(Stroke::new(1.0, palette.card_border))
+            .rounding(egui::Rounding::same(8.0))
             .inner_margin(Margin::same(TOOLBAR_OUTER_PADDING))
             .show(ui, |ui| {
+                ui.set_min_width((panel_width - TOOLBAR_OUTER_PADDING * 2.0).max(0.0));
                 ui.spacing_mut().item_spacing = egui::vec2(TOOLBAR_GROUP_SPACING, TOOLBAR_GROUP_SPACING);
                 self.render_toolbar_aligned_row(
                     ui,
@@ -482,7 +487,7 @@ impl AppState {
                     can_undo,
                     can_redo,
                 );
-                ui.add_space(TOOLBAR_GROUP_SPACING);
+                ui.add_space(toolbar_row_spacing);
                 self.render_toolbar_aligned_row(
                     ui,
                     playback,
@@ -499,16 +504,26 @@ impl AppState {
     fn render_info_panel(&self, ui: &mut egui::Ui, playback: PlaybackStatus) {
         let palette = self.palette();
         Frame::none()
-            .fill(palette.panel_bg)
-            .inner_margin(Margin::same(6.0))
+            .fill(palette.card_bg)
+            .stroke(Stroke::new(1.0, palette.card_border))
+            .rounding(egui::Rounding::same(8.0))
+            .inner_margin(Margin::same(10.0))
             .show(ui, |ui| {
+                ui.label(
+                    RichText::new("属性")
+                        .size(16.0)
+                        .strong()
+                        .color(palette.text_primary),
+                );
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(8.0);
                 ScrollArea::vertical()
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
-                        ui.spacing_mut().item_spacing =
-                            egui::vec2(TOOLBAR_GROUP_SPACING, TOOLBAR_GROUP_SPACING);
+                        ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
                         ui.vertical(|ui| {
-                            info_card(ui, palette, "音频信息", |ui| {
+                            info_section(ui, palette, "音频信息", |ui| {
                                 if let Some(buffer) = self.current_buffer() {
                                     let file_name = self
                                         .file_path
@@ -537,7 +552,10 @@ impl AppState {
                                 }
                             });
 
-                            info_card(ui, palette, "选区", |ui| {
+                            ui.add_space(2.0);
+                            ui.separator();
+                            ui.add_space(6.0);
+                            info_section(ui, palette, "选区", |ui| {
                                 if let (Some(buffer), Some(selection)) =
                                     (self.current_buffer(), self.current_selection())
                                 {
@@ -555,7 +573,10 @@ impl AppState {
                                 }
                             });
 
-                            info_card(ui, palette, "分析", |ui| {
+                            ui.add_space(2.0);
+                            ui.separator();
+                            ui.add_space(6.0);
+                            info_section(ui, palette, "分析", |ui| {
                                 if let Some(analysis) = &self.analysis {
                                     kv_row(ui, palette, "峰值振幅", &format!("{:.2}%", analysis.peak * 100.0));
                                     kv_row(ui, palette, "均方根", &format!("{:.4}", analysis.rms));
@@ -573,75 +594,72 @@ impl AppState {
     fn render_waveform_panel(&mut self, ui: &mut egui::Ui, playback: PlaybackStatus) {
         let palette = self.palette();
         Frame::none()
-            .fill(palette.panel_bg)
-            .inner_margin(Margin::same(6.0))
+            .fill(palette.card_bg)
+            .stroke(Stroke::new(1.0, palette.card_border))
+            .rounding(egui::Rounding::same(8.0))
+            .inner_margin(Margin::same(10.0))
             .show(ui, |ui| {
-                Frame::none()
-                    .fill(palette.card_bg)
-                    .stroke(Stroke::new(1.0, palette.card_border))
-                    .rounding(egui::Rounding::same(12.0))
-                    .inner_margin(Margin::same(12.0))
-                    .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.vertical(|ui| {
-                                ui.label(
-                                    RichText::new("波形")
-                                        .size(19.0)
-                                        .strong()
-                                        .color(palette.text_primary),
-                                );
-                                ui.label(subtle_text("支持缩放、平移、选区高亮与播放进度线", palette));
-                            });
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                if action_button_sized(ui, "适配视图", self.current_buffer().is_some(), 92.0)
-                                    .clicked()
-                                {
-                                    self.fit_view_requested = true;
-                                }
-                                if action_button_sized(ui, "→ 向右", self.current_buffer().is_some(), 82.0)
-                                    .clicked()
-                                {
-                                    if let Some(document) = self.document.as_ref() {
-                                        self.viewport
-                                            .pan_by_fraction(document.buffer(), self.last_waveform_width, 0.25);
-                                    }
-                                }
-                                if action_button_sized(ui, "← 向左", self.current_buffer().is_some(), 82.0)
-                                    .clicked()
-                                {
-                                    if let Some(document) = self.document.as_ref() {
-                                        self.viewport
-                                            .pan_by_fraction(document.buffer(), self.last_waveform_width, -0.25);
-                                    }
-                                }
-                                ui.allocate_ui_with_layout(
-                                    egui::vec2(160.0, ACTION_BUTTON_HEIGHT),
-                                    Layout::left_to_right(Align::Center),
-                                    |ui| {
-                                        ui.spacing_mut().interact_size.y = ACTION_BUTTON_HEIGHT;
-                                        egui::ComboBox::from_id_source("waveform_mode")
-                                            .width(144.0)
-                                            .selected_text(self.waveform_mode.label())
-                                            .show_ui(ui, |ui| {
-                                                for mode in WaveformMode::ALL {
-                                                    ui.selectable_value(
-                                                        &mut self.waveform_mode,
-                                                        mode,
-                                                        mode.label(),
-                                                    );
-                                                }
-                                            });
-                                    },
-                                );
-                            });
-                        });
-                        ui.add_space(8.0);
-                        self.render_waveform(ui, playback, palette);
-                        ui.add_space(8.0);
-                        ui.separator();
-                        ui.add_space(6.0);
-                        self.render_status_bar(ui, playback);
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(
+                            RichText::new("波形")
+                                .size(18.0)
+                                .strong()
+                                .color(palette.text_primary),
+                        );
+                        ui.label(subtle_text("缩放、平移、选区高亮与播放线", palette));
                     });
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if action_button_sized(ui, "适配视图", self.current_buffer().is_some(), 88.0)
+                            .clicked()
+                        {
+                            self.fit_view_requested = true;
+                        }
+                        if action_button_sized(ui, "→ 向右", self.current_buffer().is_some(), 78.0)
+                            .clicked()
+                        {
+                            if let Some(document) = self.document.as_ref() {
+                                self.viewport
+                                    .pan_by_fraction(document.buffer(), self.last_waveform_width, 0.25);
+                            }
+                        }
+                        if action_button_sized(ui, "← 向左", self.current_buffer().is_some(), 78.0)
+                            .clicked()
+                        {
+                            if let Some(document) = self.document.as_ref() {
+                                self.viewport
+                                    .pan_by_fraction(document.buffer(), self.last_waveform_width, -0.25);
+                            }
+                        }
+                        ui.allocate_ui_with_layout(
+                            egui::vec2(152.0, ACTION_BUTTON_HEIGHT),
+                            Layout::left_to_right(Align::Center),
+                            |ui| {
+                                ui.spacing_mut().interact_size.y = ACTION_BUTTON_HEIGHT;
+                                egui::ComboBox::from_id_source("waveform_mode")
+                                    .width(138.0)
+                                    .selected_text(self.waveform_mode.label())
+                                    .show_ui(ui, |ui| {
+                                        for mode in WaveformMode::ALL {
+                                            ui.selectable_value(
+                                                &mut self.waveform_mode,
+                                                mode,
+                                                mode.label(),
+                                            );
+                                        }
+                                    });
+                            },
+                        );
+                    });
+                });
+                ui.add_space(8.0);
+                ui.separator();
+                ui.add_space(8.0);
+                self.render_waveform(ui, playback, palette);
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(6.0);
+                self.render_status_bar(ui, playback);
             });
     }
 
@@ -705,6 +723,7 @@ impl AppState {
         can_redo: bool,
     ) {
         let available_width = ui.available_width();
+        let row_spacing = toolbar_row_spacing(available_width);
         let mut line_groups = Vec::new();
         let mut used_width = 0.0;
         let mut rendered_any_line = false;
@@ -719,7 +738,7 @@ impl AppState {
 
             if !line_groups.is_empty() && next_width > available_width {
                 if rendered_any_line {
-                    ui.add_space(TOOLBAR_GROUP_SPACING);
+                    ui.add_space(row_spacing);
                 }
                 self.render_toolbar_line(
                     ui,
@@ -742,7 +761,7 @@ impl AppState {
 
         if !line_groups.is_empty() {
             if rendered_any_line {
-                ui.add_space(TOOLBAR_GROUP_SPACING);
+                ui.add_space(row_spacing);
             }
             self.render_toolbar_line(
                 ui,
@@ -1191,56 +1210,53 @@ fn control_group_fixed(
 ) {
     ui.allocate_ui_with_layout(
         egui::vec2(width, height),
-        Layout::left_to_right(Align::Center),
+        Layout::left_to_right(Align::Min),
         |ui| {
-            Frame::none()
-                .fill(palette.card_bg)
-                .stroke(Stroke::new(1.0, palette.card_border))
-                .rounding(egui::Rounding::same(10.0))
-                .inner_margin(Margin::same(8.0))
-                .show(ui, |ui| {
-                    ui.set_min_size(egui::vec2(
-                        (width - 16.0).max(0.0),
-                        (height - 16.0).max(ACTION_BUTTON_HEIGHT),
-                    ));
-                    ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
-                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                        ui.add_sized(
-                            [GROUP_TITLE_WIDTH, ACTION_BUTTON_HEIGHT],
-                            Label::new(RichText::new(title).strong().color(palette.text_primary)),
-                        );
-                        ui.separator();
-                        ui.add_space(2.0);
-                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                            add_contents(ui);
-                        });
-                    });
+            ui.set_min_size(egui::vec2(width, height));
+            ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
+            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                ui.add_sized(
+                    [GROUP_TITLE_WIDTH, ACTION_BUTTON_HEIGHT],
+                    Label::new(
+                        RichText::new(title)
+                            .size(13.0)
+                            .strong()
+                            .color(palette.text_secondary),
+                    ),
+                );
+                let separator_height = 18.0;
+                let (separator_rect, _) =
+                    ui.allocate_exact_size(egui::vec2(8.0, separator_height), egui::Sense::hover());
+                ui.painter().line_segment(
+                    [
+                        egui::pos2(separator_rect.center().x, separator_rect.top()),
+                        egui::pos2(separator_rect.center().x, separator_rect.bottom()),
+                    ],
+                    Stroke::new(1.0, palette.card_border.gamma_multiply(0.75)),
+                );
+                ui.add_space(2.0);
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    add_contents(ui);
                 });
+            });
         },
     );
 }
 
-fn info_card(
+fn info_section(
     ui: &mut egui::Ui,
     palette: ThemePalette,
     title: &str,
     add_contents: impl FnOnce(&mut egui::Ui),
 ) {
-    Frame::none()
-        .fill(palette.card_bg)
-        .stroke(Stroke::new(1.0, palette.card_border))
-        .rounding(egui::Rounding::same(10.0))
-        .inner_margin(Margin::same(10.0))
-        .show(ui, |ui| {
-            ui.label(
-                RichText::new(title)
-                    .strong()
-                    .size(15.0)
-                    .color(palette.text_primary),
-            );
-            ui.add_space(6.0);
-            add_contents(ui);
-        });
+    ui.label(
+        RichText::new(title)
+            .strong()
+            .size(14.0)
+            .color(palette.text_primary),
+    );
+    ui.add_space(6.0);
+    add_contents(ui);
 }
 
 fn kv_row(ui: &mut egui::Ui, palette: ThemePalette, key: &str, value: &str) {
@@ -1269,7 +1285,9 @@ fn kv_row(ui: &mut egui::Ui, palette: ThemePalette, key: &str, value: &str) {
 }
 
 fn subtle_text(text: &str, palette: ThemePalette) -> RichText {
-    RichText::new(text).color(palette.text_secondary)
+    RichText::new(text)
+        .size(13.0)
+        .color(palette.text_secondary)
 }
 
 fn action_button(ui: &mut egui::Ui, label: &str, enabled: bool) -> egui::Response {
@@ -1342,6 +1360,16 @@ fn toolbar_groups_width(groups: &[ToolbarGroupKind]) -> f32 {
             spacing + group.width()
         })
         .sum()
+}
+
+fn toolbar_row_spacing(available_width: f32) -> f32 {
+    if available_width < 900.0 {
+        2.0
+    } else if available_width < 1200.0 {
+        4.0
+    } else {
+        6.0
+    }
 }
 
 fn display_file_name(path: &Path) -> String {
