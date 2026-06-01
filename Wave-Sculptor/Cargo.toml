@@ -1,0 +1,12 @@
+[package]
+name = "wave-sculptor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+eframe = "0.27"
+egui = "0.27"
+rfd = "0.14"
+rodio = "0.17"
+thiserror = "1.0"
