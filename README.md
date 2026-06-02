@@ -40,7 +40,6 @@ wave-sculptor input.wav --fade-out 3.0 6.0 -o output.wav
 ```text
 .
 ├── Cargo.toml
-├── README.md
 ├── assets
 │   ├── dark.png
 │   ├── light.png
