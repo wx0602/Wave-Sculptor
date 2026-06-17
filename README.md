@@ -197,7 +197,7 @@ wave-sculptor input.wav --fade-in 0.0 3.0 -o output.wav
 wave-sculptor input.wav --fade-out 3.0 6.0 -o output.wav
 ```
 
-## 6. 课程技术要求对应说明
+## 6. 技术要求说明
 
 ### 6.1 模块化设计
 
@@ -248,41 +248,3 @@ wave-sculptor input.wav --fade-out 3.0 6.0 -o output.wav
   - 静音片段检测
   - 时间到帧的选区转换
   - 双声道 sample index 计算
-
-### 6.6 工程规范
-
-提交前建议执行：
-
-```bash
-cargo fmt
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
-```
-
-### 6.7 README 与文档
-
-- 本 README 包含项目简介、功能说明、依赖说明、编译运行方式、技术要求对应说明和局限性说明。
-- 另附 [期末实验报告.md](./期末实验报告.md) 作为课程报告草稿，可直接整理进老师提供的 `.docx` 模板。
-
-## 7. 测试与质量检查
-
-推荐按以下顺序执行：
-
-```bash
-cargo fmt
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
-```
-
-如果需要仅验证库代码，也可以执行：
-
-```bash
-cargo test --lib
-```
-
-## 8. 已知限制
-
-- 当前项目仅支持 16-bit PCM WAV。
-- 当前仅支持单声道和双声道输入。
-- 不支持压缩编码、浮点 WAV、24-bit / 32-bit WAV 和多于双声道的音频。
-- 当前未加入频谱图、批量目录处理和插件化效果链。
