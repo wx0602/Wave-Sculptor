@@ -8,11 +8,11 @@ pub fn configure_fonts(ctx: &egui::Context) {
         return;
     };
 
+    // 优先插入中文字体，避免不同平台默认字体缺字。
     let mut fonts = FontDefinitions::default();
-    fonts.font_data.insert(
-        "system_cjk".to_string(),
-        FontData::from_owned(font_bytes).into(),
-    );
+    fonts
+        .font_data
+        .insert("system_cjk".to_string(), FontData::from_owned(font_bytes));
 
     if let Some(family) = fonts.families.get_mut(&FontFamily::Proportional) {
         family.insert(0, "system_cjk".to_string());
@@ -25,6 +25,7 @@ pub fn configure_fonts(ctx: &egui::Context) {
 }
 
 fn load_system_cjk_font() -> Option<Vec<u8>> {
+    // 依次尝试 Windows、Linux、macOS 常见中文字体路径。
     let windows_dir = std::env::var_os("WINDIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\Windows"));

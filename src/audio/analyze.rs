@@ -19,6 +19,7 @@ pub struct AudioAnalysis {
 }
 
 pub fn analyze_buffer(buffer: &AudioBuffer) -> Result<AudioAnalysis> {
+    // 分析结果集中生成，GUI 和 CLI 使用同一套统计口径。
     let silent_segments = detect_silence_segments(
         buffer,
         DEFAULT_SILENCE_THRESHOLD,
@@ -67,8 +68,7 @@ pub fn clipping_sample_count(buffer: &AudioBuffer) -> usize {
 }
 
 pub fn default_min_silence_frames(sample_rate: u32) -> usize {
-    ((sample_rate as u64 * u64::from(DEFAULT_SILENCE_MIN_DURATION_MS)) / 1000)
-        .max(1) as usize
+    ((sample_rate as u64 * u64::from(DEFAULT_SILENCE_MIN_DURATION_MS)) / 1000).max(1) as usize
 }
 
 pub fn detect_silence_segments(
@@ -91,10 +91,13 @@ pub fn detect_silence_segments(
     let mut current_start: Option<usize> = None;
 
     for frame_index in 0..buffer.frame_count() {
+        // 多声道帧必须所有声道都低于阈值，才视为静音帧。
         let is_silent = buffer
             .frame(frame_index)
             .map(|frame| {
-                frame.iter().all(|sample| i32::from(*sample).abs() <= i32::from(threshold))
+                frame
+                    .iter()
+                    .all(|sample| i32::from(*sample).abs() <= i32::from(threshold))
             })
             .unwrap_or(false);
 
@@ -135,6 +138,7 @@ pub fn trim_silence_bounds(
     let mut start_frame = 0;
     let mut end_frame = buffer.frame_count();
 
+    // 只使用贴住开头或结尾的静音段来确定裁剪边界。
     if let Some(first) = segments.first() {
         if first.start_frame == 0 {
             start_frame = first.end_frame;
@@ -172,12 +176,7 @@ mod tests {
 
     #[test]
     fn detects_silence_segments() {
-        let buffer = AudioBuffer::new(
-            vec![0, 0, 0, 1000, 1000, 0, 0, 0, 0],
-            48_000,
-            1,
-            16,
-        );
+        let buffer = AudioBuffer::new(vec![0, 0, 0, 1000, 1000, 0, 0, 0, 0], 48_000, 1, 16);
         let result = detect_silence_segments(&buffer, 10, 2);
 
         match result {

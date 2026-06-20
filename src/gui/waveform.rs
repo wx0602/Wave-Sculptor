@@ -24,6 +24,7 @@ pub fn draw_waveform(
     selection: Option<Selection>,
     playhead_frame: Option<usize>,
 ) -> WaveformView {
+    // 波形区域一次性完成背景、选区、包络、播放头和时间轴绘制。
     let desired_size = Vec2::new(ui.available_width().max(240.0), 340.0);
     let (response, painter) = ui.allocate_painter(desired_size, Sense::click_and_drag());
     let rect = response.rect;
@@ -35,11 +36,45 @@ pub fn draw_waveform(
     );
     let visible_frame_range = viewport.visible_frame_range(audio, plot_rect.width());
 
-    paint_background(&painter, rect, content_rect, plot_rect, palette, mode, audio.channels_usize());
-    paint_selection(&painter, plot_rect, &visible_frame_range, selection, palette);
-    paint_waveform(&painter, plot_rect, audio, &visible_frame_range, mode, palette);
-    paint_playhead(&painter, plot_rect, &visible_frame_range, playhead_frame, palette);
-    paint_time_axis(&painter, content_rect, plot_rect, audio, &visible_frame_range, palette);
+    paint_background(
+        &painter,
+        rect,
+        content_rect,
+        plot_rect,
+        palette,
+        mode,
+        audio.channels_usize(),
+    );
+    paint_selection(
+        &painter,
+        plot_rect,
+        &visible_frame_range,
+        selection,
+        palette,
+    );
+    paint_waveform(
+        &painter,
+        plot_rect,
+        audio,
+        &visible_frame_range,
+        mode,
+        palette,
+    );
+    paint_playhead(
+        &painter,
+        plot_rect,
+        &visible_frame_range,
+        playhead_frame,
+        palette,
+    );
+    paint_time_axis(
+        &painter,
+        content_rect,
+        plot_rect,
+        audio,
+        &visible_frame_range,
+        palette,
+    );
 
     WaveformView {
         response,
@@ -50,6 +85,7 @@ pub fn draw_waveform(
 }
 
 pub fn x_to_frame(x: f32, rect: Rect, visible_range: &Range<usize>) -> usize {
+    // 鼠标坐标映射到可见帧范围，用于点击和拖拽选区。
     if visible_range.start >= visible_range.end {
         return visible_range.start;
     }
@@ -93,7 +129,10 @@ fn paint_background(
     );
     let center_y = plot_rect.center().y;
     painter.line_segment(
-        [Pos2::new(plot_rect.left(), center_y), Pos2::new(plot_rect.right(), center_y)],
+        [
+            Pos2::new(plot_rect.left(), center_y),
+            Pos2::new(plot_rect.right(), center_y),
+        ],
         Stroke::new(1.0, palette.axis_line),
     );
 
@@ -132,6 +171,7 @@ fn paint_selection(
     let Some(selection) = selection else {
         return;
     };
+    // 只绘制和当前视口相交的选区部分。
     if selection.end_frame <= visible_range.start || selection.start_frame >= visible_range.end {
         return;
     }
@@ -144,11 +184,7 @@ fn paint_selection(
         Pos2::new(left.min(right), rect.top()),
         Pos2::new(left.max(right), rect.bottom()),
     );
-    painter.rect_filled(
-        selection_rect,
-        6.0,
-        palette.selection_fill,
-    );
+    painter.rect_filled(selection_rect, 6.0, palette.selection_fill);
 }
 
 fn paint_waveform(
@@ -159,6 +195,7 @@ fn paint_waveform(
     mode: WaveformMode,
     palette: ThemePalette,
 ) {
+    // 每个屏幕像素列只画该时间片的最小/最大采样包络。
     let columns = downsample_for_width(audio, rect.width().max(1.0) as usize, visible_range, mode);
     if columns.is_empty() {
         return;
@@ -213,6 +250,7 @@ fn downsample_for_width(
     let frames_per_column = ((total_frames as f32 / columns as f32).ceil() as usize).max(1);
     let mut result = Vec::with_capacity(columns);
 
+    // 按像素列分桶，避免在长音频上逐采样绘制。
     for column in 0..columns {
         let start_frame = visible_range.start + column * frames_per_column;
         if start_frame >= visible_range.end {
@@ -250,7 +288,12 @@ fn extract_envelope(
         WaveformMode::SplitStereo => {
             let left = collect_channel_envelope(audio, start_frame, end_frame, Some(0));
             let right = if audio.channels_usize() > 1 {
-                Some(collect_channel_envelope(audio, start_frame, end_frame, Some(1)))
+                Some(collect_channel_envelope(
+                    audio,
+                    start_frame,
+                    end_frame,
+                    Some(1),
+                ))
             } else {
                 None
             };
@@ -268,6 +311,7 @@ fn collect_channel_envelope(
     end_frame: usize,
     channel: Option<usize>,
 ) -> (f32, f32) {
+    // 返回归一化到 -1.0..1.0 的包络范围。
     let mut min_value = 1.0_f32;
     let mut max_value = -1.0_f32;
 
@@ -307,25 +351,13 @@ fn paint_envelope(
     mode: WaveformMode,
     palette: ThemePalette,
 ) {
+    // 分离立体声时上下两半分别显示左右声道。
     match (mode, column.secondary) {
         (WaveformMode::SplitStereo, Some(secondary)) => {
             let top_rect = Rect::from_min_max(rect.min, Pos2::new(rect.max.x, rect.center().y));
-            let bottom_rect =
-                Rect::from_min_max(Pos2::new(rect.min.x, rect.center().y), rect.max);
-            draw_column(
-                painter,
-                top_rect,
-                x,
-                column.primary,
-                palette.waveform_left,
-            );
-            draw_column(
-                painter,
-                bottom_rect,
-                x,
-                secondary,
-                palette.waveform_right,
-            );
+            let bottom_rect = Rect::from_min_max(Pos2::new(rect.min.x, rect.center().y), rect.max);
+            draw_column(painter, top_rect, x, column.primary, palette.waveform_left);
+            draw_column(painter, bottom_rect, x, secondary, palette.waveform_right);
         }
         _ => draw_column(
             painter,
@@ -342,18 +374,15 @@ fn paint_envelope(
     }
 }
 
-fn draw_column(
-    painter: &Painter,
-    rect: Rect,
-    x: f32,
-    envelope: (f32, f32),
-    color: Color32,
-) {
+fn draw_column(painter: &Painter, rect: Rect, x: f32, envelope: (f32, f32), color: Color32) {
     let center_y = rect.center().y;
     let half_height = rect.height() * 0.42;
     let y1 = center_y - envelope.1 * half_height;
     let y2 = center_y - envelope.0 * half_height;
-    painter.line_segment([Pos2::new(x, y1), Pos2::new(x, y2)], Stroke::new(1.0, color));
+    painter.line_segment(
+        [Pos2::new(x, y1), Pos2::new(x, y2)],
+        Stroke::new(1.0, color),
+    );
 }
 
 fn paint_time_axis(
@@ -364,6 +393,7 @@ fn paint_time_axis(
     visible_range: &Range<usize>,
     palette: ThemePalette,
 ) {
+    // 时间轴跟随当前可见范围，而不是整段音频范围。
     let axis_top = plot_rect.bottom() + 8.0;
     painter.line_segment(
         [

@@ -12,8 +12,8 @@ impl WaveformMode {
     pub fn label(self) -> &'static str {
         match self {
             Self::Mixed => "混合",
-            Self::Left => "向左",
-            Self::Right => "向右",
+            Self::Left => "左声道",
+            Self::Right => "右声道",
             Self::SplitStereo => "双声道分离",
         }
     }

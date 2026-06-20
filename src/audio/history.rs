@@ -41,9 +41,11 @@ impl AudioHistory {
 
     fn push_undo(&mut self, label: String, buffer: AudioBuffer) {
         self.undo_stack.push(HistoryEntry { label, buffer });
+        // 限制快照数量，避免长时间编辑时内存无限增长。
         if self.undo_stack.len() > self.max_entries {
             self.undo_stack.remove(0);
         }
+        // 新编辑会让旧的 redo 分支失效。
         self.redo_stack.clear();
     }
 }
@@ -82,6 +84,7 @@ impl AudioDocument {
         F: FnOnce(&mut AudioBuffer) -> Result<()>,
     {
         let label = label.into();
+        // 先在副本上执行编辑，成功后再替换当前缓冲区并记录撤销快照。
         let before = self.buffer.clone();
         let mut next = self.buffer.clone();
         edit(&mut next)?;
@@ -96,6 +99,7 @@ impl AudioDocument {
             return Ok(None);
         };
 
+        // undo 时把当前状态放入 redo 栈，便于恢复刚撤销的结果。
         let current = self.buffer.clone();
         self.history.redo_stack.push(HistoryEntry {
             label: entry.label.clone(),
@@ -111,6 +115,7 @@ impl AudioDocument {
             return Ok(None);
         };
 
+        // redo 与 undo 对称：当前状态重新成为下一次 undo 的目标。
         let current = self.buffer.clone();
         self.history.undo_stack.push(HistoryEntry {
             label: entry.label.clone(),

@@ -27,6 +27,7 @@ pub fn amplify_selection(buffer: &mut AudioBuffer, selection: Selection, gain: f
 }
 
 pub fn normalize_buffer(buffer: &mut AudioBuffer, target_peak: f32) -> Result<()> {
+    // 归一化按绝对峰值计算统一增益，保持原始动态比例。
     if !target_peak.is_finite() || target_peak <= 0.0 || target_peak > 1.0 {
         return Err(WaveSculptorError::InvalidParameter(
             "归一化目标必须位于 0 到 1 之间".to_string(),
@@ -97,6 +98,7 @@ pub fn reverse_selection(buffer: &mut AudioBuffer, selection: Selection) -> Resu
     let end = selection.end_frame;
     let frame_len = end - start;
 
+    // 以帧为单位交换，保证多声道音频的同一时间点一起反转。
     for offset in 0..frame_len / 2 {
         let left_frame = start + offset;
         let right_frame = end - 1 - offset;
@@ -123,6 +125,7 @@ pub fn cut_selection_in_place(buffer: &mut AudioBuffer, selection: Selection) ->
 
 pub fn trim_silence(buffer: &mut AudioBuffer) -> Result<()> {
     let min_frames = (buffer.sample_rate / 100).max(1) as usize;
+    // 只裁掉首尾静音，中间的停顿保留为原音频内容。
     match trim_silence_bounds(buffer, DEFAULT_SILENCE_THRESHOLD, min_frames)? {
         Some((start_frame, end_frame)) => {
             *buffer = buffer.slice_frames(start_frame, end_frame);
@@ -165,6 +168,7 @@ fn apply_frame_gain(buffer: &mut AudioBuffer, frame_index: usize, gain: f32) -> 
 
 fn scale_sample(sample: i16, gain: f32) -> i16 {
     let scaled = f32::from(sample) * gain;
+    // 所有增益类操作都在 i16 范围内钳制，避免溢出回绕。
     scaled
         .clamp(f32::from(i16::MIN), f32::from(i16::MAX))
         .round() as i16
@@ -173,8 +177,8 @@ fn scale_sample(sample: i16, gain: f32) -> i16 {
 #[cfg(test)]
 mod tests {
     use super::{
-        amplify_selection, cut_selection, fade_in_selection, fade_out_selection,
-        normalize_buffer, reverse_selection,
+        amplify_selection, cut_selection, fade_in_selection, fade_out_selection, normalize_buffer,
+        reverse_selection,
     };
     use crate::audio::buffer::AudioBuffer;
     use crate::audio::selection::Selection;

@@ -7,6 +7,7 @@ edition = "2021"
 clap = { version = "4.5", features = ["derive"] }
 eframe = "0.27"
 egui = "0.27"
+image = "0.25"
 rfd = "0.14"
 rodio = "0.17"
 thiserror = "1.0"

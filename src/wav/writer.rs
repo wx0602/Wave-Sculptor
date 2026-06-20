@@ -20,6 +20,7 @@ pub fn write_wav_to_vec(buffer: &AudioBuffer) -> Result<Vec<u8>> {
 }
 
 pub fn write_wav<W: Write>(writer: &mut W, buffer: &AudioBuffer) -> Result<()> {
+    // 写出最小 PCM WAV：RIFF 头、fmt chunk 和 data chunk。
     let data_size = (buffer.samples.len() * std::mem::size_of::<i16>()) as u32;
     let file_size = 36 + data_size;
     let byte_rate = buffer.sample_rate * u32::from(buffer.channels) * 2;
@@ -39,6 +40,7 @@ pub fn write_wav<W: Write>(writer: &mut W, buffer: &AudioBuffer) -> Result<()> {
     writer.write_all(b"data")?;
     writer.write_all(&data_size.to_le_bytes())?;
 
+    // 内部采样就是 i16 PCM，所以直接按小端序输出。
     for sample in &buffer.samples {
         writer.write_all(&sample.to_le_bytes())?;
     }

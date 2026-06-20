@@ -44,6 +44,7 @@ impl ThemeMode {
     }
 
     pub fn palette(self) -> ThemePalette {
+        // 所有自绘控件都从同一调色板取色，避免主题切换时颜色不一致。
         match self {
             Self::Dark => ThemePalette {
                 app_bg: color(0x0B1220),
@@ -98,6 +99,7 @@ impl ThemeMode {
 pub fn apply_theme(ctx: &Context, theme: ThemeMode) {
     let palette = theme.palette();
     let mut style: Style = (*ctx.style()).clone();
+    // egui 默认控件尺寸偏紧，这里统一交互尺寸以匹配工具栏布局。
     style.spacing.button_padding = Vec2::new(10.0, 6.0);
     style.spacing.interact_size = Vec2::new(36.0, 34.0);
     style.spacing.item_spacing = Vec2::new(8.0, 8.0);
@@ -111,6 +113,7 @@ fn build_visuals(theme: ThemeMode, palette: ThemePalette) -> Visuals {
         ThemeMode::Dark => Visuals::dark(),
         ThemeMode::Light => Visuals::light(),
     };
+    // 在 egui 的明暗基础主题上覆盖项目色板。
     visuals.override_text_color = Some(palette.text_primary);
     visuals.window_fill = palette.app_bg;
     visuals.panel_fill = palette.panel_bg;

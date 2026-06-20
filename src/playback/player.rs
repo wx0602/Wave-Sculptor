@@ -19,12 +19,19 @@ pub struct PlaybackStatus {
 }
 
 pub struct Player {
+    // OutputStream 必须和 Sink 一起持有，否则底层输出设备会提前释放。
     stream: Option<OutputStream>,
     sink: Option<Sink>,
     started_at: Option<Instant>,
     playback_start_frame: usize,
     playback_end_frame: usize,
     playback_sample_rate: u32,
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Player {
@@ -46,7 +53,10 @@ impl Player {
     pub fn status(&mut self) -> PlaybackStatus {
         self.refresh();
 
-        let total_frames = self.playback_end_frame.saturating_sub(self.playback_start_frame);
+        // 状态里的帧范围使用原始音频坐标，方便 GUI 直接绘制播放头。
+        let total_frames = self
+            .playback_end_frame
+            .saturating_sub(self.playback_start_frame);
         let total_seconds = if self.playback_sample_rate == 0 {
             0.0
         } else {
@@ -62,7 +72,8 @@ impl Player {
             0.0
         };
         let playhead_frame = if is_playing && self.playback_sample_rate > 0 {
-            let relative_frame = (current_seconds * self.playback_sample_rate as f64).round() as usize;
+            let relative_frame =
+                (current_seconds * self.playback_sample_rate as f64).round() as usize;
             Some((self.playback_start_frame + relative_frame).min(self.playback_end_frame))
         } else {
             None
@@ -107,6 +118,7 @@ impl Player {
     }
 
     pub fn play_range(&mut self, buffer: &AudioBuffer, selection: Selection) -> Result<()> {
+        // rodio 从独立 WAV 字节流解码播放，选区先裁剪成临时缓冲区。
         let selected = cut_selection(buffer, selection)?;
         let bytes = write_wav_to_vec(&selected)?;
         self.play_wav_bytes(
@@ -129,9 +141,10 @@ impl Player {
         let cursor = Cursor::new(bytes);
         let decoder = Decoder::new(BufReader::new(cursor))
             .map_err(|err| WaveSculptorError::Playback(err.to_string()))?;
-        let (stream, handle) =
-            OutputStream::try_default().map_err(|err| WaveSculptorError::Playback(err.to_string()))?;
-        let sink = Sink::try_new(&handle).map_err(|err| WaveSculptorError::Playback(err.to_string()))?;
+        let (stream, handle) = OutputStream::try_default()
+            .map_err(|err| WaveSculptorError::Playback(err.to_string()))?;
+        let sink =
+            Sink::try_new(&handle).map_err(|err| WaveSculptorError::Playback(err.to_string()))?;
         sink.append(decoder);
         sink.play();
 
@@ -146,6 +159,7 @@ impl Player {
     }
 
     fn refresh(&mut self) {
+        // Sink 变空表示播放结束，统一清掉播放状态。
         if self.sink.as_ref().is_some_and(Sink::empty) {
             self.stop_internal();
         }

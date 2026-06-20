@@ -9,6 +9,7 @@ pub struct Selection {
 
 impl Selection {
     pub fn new(start_frame: usize, end_frame: usize) -> Result<Self> {
+        // 选区使用左闭右开帧范围，空范围无效。
         if start_frame >= end_frame {
             return Err(WaveSculptorError::InvalidSelection);
         }
@@ -55,6 +56,7 @@ impl Selection {
             ));
         }
 
+        // 起点向下取整、终点向上取整，保证覆盖用户指定的完整时间段。
         let start_frame = (start_seconds * buffer.sample_rate as f64).floor() as usize;
         let end_frame = (end_seconds * buffer.sample_rate as f64).ceil() as usize;
         let clamped_end = end_frame.min(buffer.frame_count());

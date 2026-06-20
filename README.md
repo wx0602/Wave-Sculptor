@@ -40,6 +40,9 @@ wave-sculptor input.wav --fade-out 3.0 6.0 -o output.wav
 ```text
 .
 ├── Cargo.toml
+├── README.md
+├── Rust课程期末报告.docx
+├── 期末实验报告.md
 ├── assets
 │   ├── dark.png
 │   ├── light.png
@@ -197,7 +200,7 @@ wave-sculptor input.wav --fade-in 0.0 3.0 -o output.wav
 wave-sculptor input.wav --fade-out 3.0 6.0 -o output.wav
 ```
 
-## 6. 技术要求说明
+## 6. 课程要求说明
 
 ### 6.1 模块化设计
 

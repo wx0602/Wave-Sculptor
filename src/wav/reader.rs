@@ -31,6 +31,7 @@ pub fn parse_header<R: Read + Seek>(reader: &mut R) -> Result<WavHeader> {
 pub fn parse_wav<R: Read + Seek>(reader: &mut R) -> Result<AudioBuffer> {
     let (header, data_offset) = locate_chunks(reader)?;
 
+    // 处理链路只支持未压缩 16 位 PCM，避免后续采样解释出错。
     if header.audio_format != 1 {
         return Err(WaveSculptorError::UnsupportedFormat(format!(
             "仅支持 PCM WAV，当前编码格式编号为 {}",
@@ -59,6 +60,7 @@ pub fn parse_wav<R: Read + Seek>(reader: &mut R) -> Result<AudioBuffer> {
     let mut data = vec![0_u8; header.data_size as usize];
     reader.read_exact(&mut data)?;
 
+    // 16 位 PCM 采样在 WAV 中按小端序连续存放。
     let samples = data
         .chunks_exact(2)
         .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]))
@@ -75,6 +77,7 @@ pub fn parse_wav<R: Read + Seek>(reader: &mut R) -> Result<AudioBuffer> {
 fn locate_chunks<R: Read + Seek>(reader: &mut R) -> Result<(WavHeader, u64)> {
     reader.seek(SeekFrom::Start(0))?;
 
+    // RIFF/WAVE 文件由若干 chunk 组成，fmt 和 data 的顺序不固定。
     let mut riff = [0_u8; 4];
     reader.read_exact(&mut riff)?;
     if &riff != b"RIFF" {
@@ -110,6 +113,7 @@ fn locate_chunks<R: Read + Seek>(reader: &mut R) -> Result<(WavHeader, u64)> {
 
         match &chunk_id {
             b"fmt " => {
+                // PCM 的 fmt chunk 至少 16 字节，扩展字段在读取基础头后跳过。
                 if chunk_size < 16 {
                     return Err(WaveSculptorError::InvalidWav(
                         "fmt 数据块长度小于 16 字节".to_string(),
@@ -135,6 +139,7 @@ fn locate_chunks<R: Read + Seek>(reader: &mut R) -> Result<(WavHeader, u64)> {
             b"data" => {
                 data_offset = Some(chunk_data_offset);
                 data_size = Some(chunk_size);
+                // 先记录位置，继续扫描以兼容包含其它 chunk 的 WAV 文件。
                 reader.seek(SeekFrom::Current(i64::from(chunk_size)))?;
             }
             _ => {
@@ -142,6 +147,7 @@ fn locate_chunks<R: Read + Seek>(reader: &mut R) -> Result<(WavHeader, u64)> {
             }
         }
 
+        // RIFF chunk 数据按偶数字节对齐，奇数字节长度后会有一个填充字节。
         if chunk_size % 2 != 0 {
             reader.seek(SeekFrom::Current(1))?;
         }

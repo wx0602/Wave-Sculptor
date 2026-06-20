@@ -12,7 +12,11 @@ use crate::error::{Result, WaveSculptorError};
 use crate::wav::{reader, writer};
 
 #[derive(Debug, Parser)]
-#[command(name = "wave-sculptor", version, about = "Wave-Sculptor GUI/CLI 音频工具")]
+#[command(
+    name = "wave-sculptor",
+    version,
+    about = "Wave-Sculptor GUI/CLI 音频工具"
+)]
 pub struct CliArgs {
     pub input: Option<PathBuf>,
     #[arg(short, long)]
@@ -34,6 +38,7 @@ pub fn run(args: CliArgs) -> Result<()> {
         .input
         .ok_or_else(|| WaveSculptorError::Cli("CLI 模式必须提供输入文件".to_string()))?;
     let mut buffer = reader::read_wav_file(&input)?;
+    // 只有真正修改音频时才要求输出路径，单纯统计不写文件。
     let mut modified = false;
 
     if args.stats {
@@ -74,14 +79,19 @@ pub fn run(args: CliArgs) -> Result<()> {
         println!("已写出: {}", output.display());
     } else if !args.stats {
         return Err(WaveSculptorError::Cli(
-            "未指定任何 CLI 操作，可使用 --stats、--normalize、--mute、--fade-in、--fade-out".to_string(),
+            "未指定任何 CLI 操作，可使用 --stats、--normalize、--mute、--fade-in、--fade-out"
+                .to_string(),
         ));
     }
 
     Ok(())
 }
 
-fn selection_from_range(buffer: &crate::audio::buffer::AudioBuffer, range: &[f64]) -> Result<Selection> {
+fn selection_from_range(
+    buffer: &crate::audio::buffer::AudioBuffer,
+    range: &[f64],
+) -> Result<Selection> {
+    // clap 已限制参数个数，这里保留校验以保护直接调用场景。
     if range.len() != 2 {
         return Err(WaveSculptorError::Cli(
             "时间范围参数必须提供开始和结束秒数".to_string(),
